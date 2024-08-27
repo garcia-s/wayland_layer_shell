@@ -1,11 +1,15 @@
 #include "include/wayland_layer_shell/wayland_layer_shell_plugin.h"
 
-#include "wayland_layer_shell_plugin_private.h"
-#include <cstring>
 #include <flutter_linux/flutter_linux.h>
-#include <gtk-layer-shell/gtk-layer-shell.h>
 #include <gtk/gtk.h>
 #include <sys/utsname.h>
+
+#include <cstring>
+
+#include "wayland_layer_shell_plugin_private.h"
+
+#include "iostream"
+#include <gtk-layer-shell/gtk-layer-shell.h>
 
 #define WAYLAND_LAYER_SHELL_PLUGIN(obj)                                        \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), wayland_layer_shell_plugin_get_type(),    \
@@ -20,31 +24,24 @@ G_DEFINE_TYPE(WaylandLayerShellPlugin, wayland_layer_shell_plugin,
               g_object_get_type())
 
 GtkWindow *get_window(WaylandLayerShellPlugin *self) {
-
   FlView *view = fl_plugin_registrar_get_view(self->registrar);
   if (view == nullptr)
     return nullptr;
 
-  GtkWindow *win = GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(view)));
-
-  return win;
+  return GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
 static FlMethodResponse *is_supported(WaylandLayerShellPlugin *self) {
-
   if (gtk_layer_is_supported() == 0) {
     GtkWindow *gtk_window = get_window(self);
-
     gtk_widget_show(GTK_WIDGET(gtk_window));
   }
   g_autoptr(FlValue) result = fl_value_new_bool(gtk_layer_is_supported());
-
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
 static FlMethodResponse *initialize(WaylandLayerShellPlugin *self,
                                     FlValue *args) {
-
   g_autoptr(FlValue) result;
   GtkWindow *gtk_window = get_window(self);
   if (gtk_layer_is_supported() == 0) {
@@ -58,44 +55,36 @@ static FlMethodResponse *initialize(WaylandLayerShellPlugin *self,
   }
 
   gtk_widget_show(GTK_WIDGET(gtk_window));
-
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
 static FlMethodResponse *set_layer(WaylandLayerShellPlugin *self,
                                    FlValue *args) {
-
   int layer = fl_value_get_int(fl_value_lookup_string(args, "layer"));
   gtk_layer_set_layer(get_window(self), static_cast<GtkLayerShellLayer>(layer));
   g_autoptr(FlValue) result = fl_value_new_bool(true);
-
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
 static FlMethodResponse *get_layer(WaylandLayerShellPlugin *self) {
-
   g_autoptr(FlValue) result =
       fl_value_new_int(gtk_layer_get_layer(get_window(self)));
-
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
 static FlMethodResponse *get_monitor_list(WaylandLayerShellPlugin *self) {
-
   GdkDisplay *display = gdk_display_get_default();
   g_autoptr(FlValue) result = fl_value_new_list();
   for (int i = 0; i < gdk_display_get_n_monitors(display); i++) {
     GdkMonitor *monitor = gdk_display_get_monitor(display, i);
-    gchar *val =
-        g_strdup_ fl_value_append_take(result, fl_value_new_string(val));
+    gchar *val = g_strdup_printf("%i:%s", i, gdk_monitor_get_model(monitor));
+    fl_value_append_take(result, fl_value_new_string(val));
   }
-
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
 static FlMethodResponse *set_monitor(WaylandLayerShellPlugin *self,
                                      FlValue *args) {
-
   GdkDisplay *display = gdk_display_get_default();
   int id = fl_value_get_int(fl_value_lookup_string(args, "id"));
 
@@ -103,7 +92,6 @@ static FlMethodResponse *set_monitor(WaylandLayerShellPlugin *self,
     gtk_layer_set_monitor(get_window(self), NULL);
 
     g_autoptr(FlValue) result = fl_value_new_bool(true);
-
     return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
   }
 
@@ -111,13 +99,11 @@ static FlMethodResponse *set_monitor(WaylandLayerShellPlugin *self,
   gtk_layer_set_monitor(get_window(self), monitor);
 
   g_autoptr(FlValue) result = fl_value_new_bool(true);
-
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
 static FlMethodResponse *set_anchor(WaylandLayerShellPlugin *self,
                                     FlValue *args) {
-
   int edge = fl_value_get_int(fl_value_lookup_string(args, "edge"));
   gboolean anchor_to_edge =
       fl_value_get_bool(fl_value_lookup_string(args, "anchor_to_edge"));
@@ -125,7 +111,6 @@ static FlMethodResponse *set_anchor(WaylandLayerShellPlugin *self,
   gtk_layer_set_anchor(get_window(self), static_cast<GtkLayerShellEdge>(edge),
                        anchor_to_edge);
   g_autoptr(FlValue) result = fl_value_new_bool(true);
-
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
@@ -206,7 +191,6 @@ static FlMethodResponse *get_keyboard_mode(WaylandLayerShellPlugin *self) {
 static void
 wayland_layer_shell_plugin_handle_method_call(WaylandLayerShellPlugin *self,
                                               FlMethodCall *method_call) {
-
   g_autoptr(FlMethodResponse) response = nullptr;
 
   const gchar *method = fl_method_call_get_name(method_call);
@@ -256,19 +240,17 @@ wayland_layer_shell_plugin_handle_method_call(WaylandLayerShellPlugin *self,
 FlMethodResponse *get_platform_version() {
   struct utsname uname_data = {};
   uname(&uname_data);
-  g_autofree gchar *version = g_strdup_ g_autoptr(FlValue) result =
-      fl_value_new_string(version);
+  g_autofree gchar *version = g_strdup_printf("Linux %s", uname_data.version);
+  g_autoptr(FlValue) result = fl_value_new_string(version);
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
 static void wayland_layer_shell_plugin_dispose(GObject *object) {
-
   G_OBJECT_CLASS(wayland_layer_shell_plugin_parent_class)->dispose(object);
 }
 
 static void
 wayland_layer_shell_plugin_class_init(WaylandLayerShellPluginClass *klass) {
-
   G_OBJECT_CLASS(klass)->dispose = wayland_layer_shell_plugin_dispose;
 }
 
@@ -276,14 +258,12 @@ static void wayland_layer_shell_plugin_init(WaylandLayerShellPlugin *self) {}
 
 static void method_call_cb(FlMethodChannel *channel, FlMethodCall *method_call,
                            gpointer user_data) {
-
   WaylandLayerShellPlugin *plugin = WAYLAND_LAYER_SHELL_PLUGIN(user_data);
   wayland_layer_shell_plugin_handle_method_call(plugin, method_call);
 }
 
 void wayland_layer_shell_plugin_register_with_registrar(
     FlPluginRegistrar *registrar) {
-
   WaylandLayerShellPlugin *plugin = WAYLAND_LAYER_SHELL_PLUGIN(
       g_object_new(wayland_layer_shell_plugin_get_type(), nullptr));
 
@@ -298,3 +278,4 @@ void wayland_layer_shell_plugin_register_with_registrar(
 
   g_object_unref(plugin);
 }
+
